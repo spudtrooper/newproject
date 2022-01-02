@@ -158,15 +158,6 @@ func writeFile(t string, data interface{}, dir string, outFileName string) (stri
 	return outFile, nil
 }
 
-func touch(dir, outFileName string) error {
-	outFile := path.Join(dir, outFileName)
-	if err := ioutil.WriteFile(outFile, []byte{}, 7055); err != nil {
-		return err
-	}
-	log.Printf("touched %s", outFile)
-	return nil
-}
-
 func run(dir, command string, args ...string) error {
 	log.Printf("running from %s: %s %s", dir, command, strings.Join(args, " "))
 	cmd := exec.Command(command, args...)
