@@ -5,8 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spudtrooper/goutil/check"
+	"github.com/spudtrooper/newproject/gen"
 	"github.com/spudtrooper/newproject/gitversion"
-	"github.com/spudtrooper/newproject/newproject"
 )
 
 var (
@@ -26,7 +26,7 @@ func realMain() error {
 	if *username == "" {
 		return errors.Errorf("--username required")
 	}
-	if err := newproject.Main(*name, *username, newproject.Outdir(*outdir)); err != nil {
+	if err := gen.Main(*name, *username, gen.Outdir(*outdir)); err != nil {
 		return err
 	}
 	return nil

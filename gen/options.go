@@ -1,14 +1,11 @@
-package newproject
+package gen
 
-// genopts --outfile=newproject/options.go 'outdir:string'
-
-
+// genopts --outfile=gen/options.go 'outdir:string'
 
 type Option func(*optionImpl)
 
 type Options interface {
 	Outdir() string
-
 }
 
 func Outdir(outdir string) Option {
@@ -19,7 +16,6 @@ func Outdir(outdir string) Option {
 
 type optionImpl struct {
 	outdir string
-
 }
 
 func (o *optionImpl) Outdir() string { return o.outdir }

@@ -1,4 +1,4 @@
-package newproject
+package gen
 
 import (
 	"bytes"
