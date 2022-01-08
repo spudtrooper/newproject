@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spudtrooper/goutil/check"
+	"github.com/spudtrooper/newproject/gitversion"
 	"github.com/spudtrooper/newproject/newproject"
 )
 
@@ -15,6 +16,10 @@ var (
 )
 
 func realMain() error {
+	if gitversion.CheckVersionFlag() {
+		return nil
+	}
+
 	if *name == "" {
 		return errors.Errorf("--name required")
 	}
