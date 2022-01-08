@@ -114,6 +114,10 @@ open /Applications/GitHub\ Desktop.app
 		return err
 	}
 
+	if err := run(scriptsDir, "chmod", "+x", "commit.sh"); err != nil {
+		return err
+	}
+
 	if err := run(rootDir, "go", "mod", "init", fmt.Sprintf("github.com/%s/%s", username, name)); err != nil {
 		return err
 	}
