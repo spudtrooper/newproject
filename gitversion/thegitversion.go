@@ -1,3 +1,3 @@
 package gitversion
 
-const theGitVersion = "v0.0.3"
+const theGitVersion = "v0.0.4"
