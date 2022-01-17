@@ -19,8 +19,23 @@ import (
 func Main(name, username string, inOpts ...Option) error {
 	opts := MakeOptions(inOpts...)
 
-	outdir := or.String(opts.Outdir(), name)
-	pkg := name
+	var pkg string
+	var outdir string
+	if name == "" {
+		outdir = or.String(opts.Outdir(), ".")
+		absDot, err := filepath.Abs(".")
+		if err != nil {
+			return err
+		}
+		pkg = filepath.Base(absDot)
+		name = pkg
+		log.Printf("outdir: %s", outdir)
+		log.Printf("absDot: %s", absDot)
+		log.Printf("pkg: %s", pkg)
+	} else {
+		outdir = or.String(opts.Outdir(), name)
+		pkg = name
+	}
 
 	rootDir, err := io.MkdirAll(outdir)
 	if err != nil {

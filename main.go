@@ -20,9 +20,6 @@ func realMain() error {
 		return nil
 	}
 
-	if *name == "" {
-		return errors.Errorf("--name required")
-	}
 	if *username == "" {
 		return errors.Errorf("--username required")
 	}
