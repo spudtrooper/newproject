@@ -29,9 +29,6 @@ func Main(name, username string, inOpts ...Option) error {
 		}
 		pkg = filepath.Base(absDot)
 		name = pkg
-		log.Printf("outdir: %s", outdir)
-		log.Printf("absDot: %s", absDot)
-		log.Printf("pkg: %s", pkg)
 	} else {
 		outdir = or.String(opts.Outdir(), name)
 		pkg = name
