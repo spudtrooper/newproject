@@ -12,15 +12,17 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/fatih/color"
 	"github.com/spudtrooper/goutil/io"
 	"github.com/spudtrooper/goutil/or"
+	"github.com/spudtrooper/goutil/task"
 )
 
 func Main(name, username string, inOpts ...Option) error {
 	opts := MakeOptions(inOpts...)
 
-	var pkg string
-	var outdir string
+	var pkg, outdir, rootDir, pkgDir, scriptsDir string
+
 	if name == "" {
 		outdir = or.String(opts.Outdir(), ".")
 		absDot, err := filepath.Abs(".")
@@ -34,20 +36,33 @@ func Main(name, username string, inOpts ...Option) error {
 		pkg = name
 	}
 
-	rootDir, err := io.MkdirAll(outdir)
-	if err != nil {
-		return err
-	}
-	pkgDir, err := io.MkdirAll(rootDir, pkg)
-	if err != nil {
-		return err
-	}
-	scriptsDir, err := io.MkdirAll(rootDir, "scripts")
-	if err != nil {
-		return err
-	}
+	tb := task.MakeBuilder(task.Color(color.New(color.FgYellow)))
 
-	main, err := writeFile(`	
+	tb.Add("initializing directories", func() error {
+		r, err := io.MkdirAll(outdir)
+		if err != nil {
+			return err
+		}
+		rootDir = r
+		p, err := io.MkdirAll(rootDir, pkg)
+		if err != nil {
+			return err
+		}
+		pkgDir = p
+		s, err := io.MkdirAll(rootDir, "scripts")
+		if err != nil {
+			return err
+		}
+		scriptsDir = s
+
+		return nil
+	})
+
+	var main, lib string
+
+	tb.Add("creating files", func() error {
+		{
+			out, err := writeFile(`	
 package main
 
 import (
@@ -69,17 +84,20 @@ func main() {
 	check.Err(realMain())
 }
 `, struct {
-		Pkg      string
-		Username string
-	}{
-		Pkg:      pkg,
-		Username: username,
-	}, rootDir, "main.go")
-	if err != nil {
-		return err
-	}
+				Pkg      string
+				Username string
+			}{
+				Pkg:      pkg,
+				Username: username,
+			}, rootDir, "main.go")
+			if err != nil {
+				return err
+			}
+			main = out
+		}
 
-	lib, err := writeFile(`	
+		{
+			out, err := writeFile(`	
 package {{.Pkg}}
 
 import (
@@ -91,27 +109,29 @@ func Main() error {
 	return nil
 }
 `, struct {
-		Pkg string
-	}{
-		Pkg: pkg,
-	}, pkgDir, pkg+".go")
-	if err != nil {
-		return err
-	}
+				Pkg string
+			}{
+				Pkg: pkg,
+			}, pkgDir, pkg+".go")
+			if err != nil {
+				return err
+			}
+			lib = out
+		}
 
-	if _, err := writeFile(`
+		if _, err := writeFile(`
 # {{.Pkg}}
 
 TODO
 	`, struct {
-		Pkg string
-	}{
-		Pkg: pkg,
-	}, rootDir, "README.md"); err != nil {
-		return err
-	}
+			Pkg string
+		}{
+			Pkg: pkg,
+		}, rootDir, "README.md"); err != nil {
+			return err
+		}
 
-	if _, err := writeFile(`
+		if _, err := writeFile(`
 #!/bin/sh
 
 msg="$@"
@@ -122,42 +142,80 @@ git add .
 git commit -m "$msg"
 open /Applications/GitHub\ Desktop.app	
 		`, struct {
-	}{}, scriptsDir, "commit.sh"); err != nil {
-		return err
-	}
+		}{}, scriptsDir, "commit.sh"); err != nil {
+			return err
+		}
 
-	if err := run(scriptsDir, "chmod", "+x", "commit.sh"); err != nil {
-		return err
-	}
+		if err := run(scriptsDir, "chmod", "+x", "commit.sh"); err != nil {
+			return err
+		}
 
-	if err := run(rootDir, "go", "mod", "init", fmt.Sprintf("github.com/%s/%s", username, name)); err != nil {
-		return err
-	}
-	if err := run(rootDir, "go", "mod", "tidy"); err != nil {
-		return err
-	}
+		if _, err := writeFile(`
+	#!/bin/sh
+	
+	go run main.go "$@"
+			`, struct {
+		}{}, scriptsDir, "run.sh"); err != nil {
+			return err
+		}
 
-	relMain, err := filepath.Rel(rootDir, main)
-	if err != nil {
-		return err
-	}
-	if err := run(rootDir, "go", "fmt", relMain); err != nil {
-		return err
-	}
+		if err := run(scriptsDir, "chmod", "+x", "run.sh"); err != nil {
+			return err
+		}
 
-	relLib, err := filepath.Rel(rootDir, lib)
-	if err != nil {
-		return err
-	}
-	if err := run(rootDir, "go", "fmt", relLib); err != nil {
-		return err
-	}
+		return nil
+	})
 
-	if err := run(rootDir, "go", "run", relMain); err != nil {
-		return err
-	}
+	tb.Add("updating dependencies", func() error {
+		if err := run(rootDir, "go", "mod", "init", fmt.Sprintf("github.com/%s/%s", username, name)); err != nil {
+			return err
+		}
+		if err := run(rootDir, "go", "mod", "tidy"); err != nil {
+			return err
+		}
+		return nil
+	})
 
-	return nil
+	var relMain, relLib string
+	tb.Add("formating files", func() error {
+		rm, err := filepath.Rel(rootDir, main)
+		if err != nil {
+			return err
+		}
+		relMain = rm
+		if err := run(rootDir, "go", "fmt", relMain); err != nil {
+			return err
+		}
+
+		rl, err := filepath.Rel(rootDir, lib)
+		if err != nil {
+			return err
+		}
+		relLib = rl
+		if err := run(rootDir, "go", "fmt", relLib); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	tb.Add("running tests", func() error {
+		if err := run(rootDir, "go", "run", relMain); err != nil {
+			return err
+		}
+
+		if err := run(rootDir, "./scripts/run.sh"); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return tb.Build().Go()
+}
+
+func subPrintf(tmpl string, args ...interface{}) {
+	log.Println(color.GreenString(fmt.Sprintf("  "+tmpl, args...)))
 }
 
 func writeFile(t string, data interface{}, dir string, outFileName string) (string, error) {
@@ -170,7 +228,7 @@ func writeFile(t string, data interface{}, dir string, outFileName string) (stri
 		return "", err
 	}
 
-	log.Printf("wrote to %s", outFile)
+	subPrintf("wrote to %s", outFile)
 	return outFile, nil
 }
 
