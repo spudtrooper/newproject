@@ -151,9 +151,9 @@ open /Applications/GitHub\ Desktop.app
 		}
 
 		if _, err := writeFile(`
-	#!/bin/sh
-	
-	go run main.go "$@"
+#!/bin/sh
+
+go run main.go "$@"
 			`, struct {
 		}{}, scriptsDir, "run.sh"); err != nil {
 			return err
