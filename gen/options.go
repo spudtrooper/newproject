@@ -1,6 +1,6 @@
 package gen
 
-// genopts --outfile=gen/options.go 'outdir:string'
+//go:generate genopts --outfile=options.go "outdir:string"
 
 type Option func(*optionImpl)
 
